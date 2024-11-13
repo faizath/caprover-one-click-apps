@@ -1,0 +1,78 @@
+captainVersion: 4
+services:
+    $$cap_appname-db:
+        documentation: Taken from https://hub.docker.com/_/mariadb
+        image: mariadb:$$cap_mariadb_version
+        volumes:
+            - $$cap_appname-db-data:/var/lib/mysql
+        restart: always
+        environment:
+            MARIADB_ROOT_PASSWORD: $$cap_db_pass
+            MARIADB_USER: ctfd
+            MARIADB_PASSWORD: $$cap_db_pass
+            MARIADB_DATABASE: $$cap_db_user
+            MARIADB_AUTO_UPGRADE: 1
+        caproverExtra:
+            notExposeAsWebApp: 'true'
+    $$cap_appname-cache:
+        documentation: Taken from https://github.com/CTFd/CTFd/blob/master/docker-compose.yml
+        image: redis:$$cap_redis_version
+        restart: always
+        volumes:
+            - $$cap_appname-cache-data:/data
+        caproverExtra:
+            notExposeAsWebApp: 'true'
+    $$cap_appname:
+        caproverExtra:
+            containerHttpPort: 8000
+        depends_on:
+            - $$cap_appname-db
+            - $$cap_appname-cache
+        documentation: Taken from https://github.com/CTFd/CTFd/blob/master/docker-compose.yml
+        image: ctfd/ctfd:$$cap_ctfd_version
+        volumes:
+            - $$cap_appname-logs:/var/log/CTFd
+            - $$cap_appname-uploads:/var/uploads
+            - $$cap_appname-opt:/opt/CTFd
+        restart: always
+        environment:
+            UPLOAD_FOLDER: /var/uploads
+            LOG_FOLDER: /var/log/CTFd
+            DATABASE_URL: mysql+pymysql://$$cap_db_user:$$cap_db_pass@srv-captain--$$cap_appname-db/ctfd
+            REDIS_URL: redis://srv-captain--$$cap_appname-cache:6379
+            REVERSE_PROXY: true
+caproverOneClickApp:
+    variables:
+        - id: $$cap_ctfd_version
+          label: CTFd Version
+          defaultValue: 3.7.4
+          description: Check out their Docker page for the valid tags https://hub.docker.com/r/ctfd/ctfd/tags
+          validRegex: /^([^\s^\/])+$/
+        - id: $$cap_redis_version
+          label: Redis (cache) Version
+          defaultValue: 6.2.14
+          description: Check out their Docker page for the valid tags https://hub.docker.com/_/redis/tags
+          validRegex: /^([^\s^\/])+$/
+        - id: $$cap_mariadb_version
+          label: MariaDB (database) version
+          defaultValue: 10.11
+          description: Check out their Docker page for the valid tags https://hub.docker.com/_/mariadb/tags
+          validRegex: /^([^\s^\/])+$/
+        - id: $$cap_db_user
+          label: database user
+          defaultValue: ctfd
+          description: Username for the database using mariadb.
+          validRegex: /^([a-zA-Z0-9])+$/
+        - id: $$cap_db_pass
+          label: database password
+          defaultValue: $$cap_gen_random_hex(32)
+          description: Password for the database user and root using mariadb.
+          validRegex: /.{1,}/
+    instructions:
+        start: CTFd is a Capture The Flag framework focusing on ease of use and customizability. It comes with everything you need to run a CTF and it's easy to customize with plugins and themes. https://ctfd.io/
+        end: >-
+            CTFd has been successfully deployed!
+    displayName: CTFd
+    isOfficial: true
+    description: CTFd is a Capture The Flag framework focusing on ease of use and customizability. It comes with everything you need to run a CTF and it's easy to customize with plugins and themes.
+    documentation: Taken from https://hub.docker.com/r/ctfd/ctfd
